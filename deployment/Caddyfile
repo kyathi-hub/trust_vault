@@ -1,0 +1,90 @@
+# TrustVault — Caddy reverse proxy configuration
+# 
+# Security model:
+# - Only ports 80 (redirect) and 443 (HTTPS) are exposed
+# - Backend API, Keycloak OIDC endpoints, and frontend are proxied
+# - Keycloak admin console is NOT proxied (never publicly accessible)
+# - MinIO, PostgreSQL, Redis are NOT proxied
+# - Security headers added here AND in the backend (belt-and-suspenders)
+# - Max upload body size enforced here (can't be bypassed at app layer)
+
+{
+    # Global options
+    admin off                    # Caddy admin API is disabled in production
+    email {$ACME_EMAIL:-admin@trustvault.local}
+}
+
+{$PUBLIC_HOSTNAME:-localhost} {
+    # ── TLS ──────────────────────────────────────────────────────────────────
+    # Caddy automatically handles TLS certificates via Let's Encrypt
+    # For localhost/development, Caddy issues self-signed certs
+
+    # ── Security Headers ─────────────────────────────────────────────────────
+    header {
+        Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        -Server
+    }
+
+    # ── Upload size limit ─────────────────────────────────────────────────────
+    # Enforced at proxy level — cannot be bypassed by application
+    @upload path /api/v1/documents/*/upload /api/v1/documents
+    handle @upload {
+        request_body {
+            max_size 55MB   # slightly above app limit to allow multipart overhead
+        }
+        reverse_proxy backend:8000
+    }
+
+    # ── Backend API ───────────────────────────────────────────────────────────
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            health_uri /health/live
+            health_interval 10s
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Real-IP {remote_host}
+        }
+    }
+
+    # ── Keycloak OIDC endpoints only (NOT admin console) ─────────────────────
+    # Only proxy the OIDC/auth endpoints — admin console stays internal
+    handle /auth/realms/* {
+        reverse_proxy keycloak:8080 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle /auth/resources/* {
+        reverse_proxy keycloak:8080
+    }
+
+    # Explicitly block Keycloak admin console — belt-and-suspenders
+    handle /auth/admin/* {
+        respond "Not Found" 404
+    }
+
+    # ── Frontend (static files) ────────────────────────────────────────────
+    handle {
+        reverse_proxy frontend:80 {
+            health_uri /
+            health_interval 15s
+        }
+    }
+
+    # ── Logging ───────────────────────────────────────────────────────────────
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+}
+
+# HTTP → HTTPS redirect
+http:// {
+    redir https://{host}{uri} permanent
+}

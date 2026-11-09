@@ -1,0 +1,68 @@
+# TrustVault .gitignore
+
+# ── SECRETS — NEVER COMMIT ────────────────────────────────────────────────────
+.env
+.env.local
+.env.production
+*.key
+*.pem
+*.p12
+*.pfx
+secrets/
+
+# ── Dev database and storage ──────────────────────────────────────────────────
+backend/trustvault_dev.db
+backend/trustvault_dev.db-shm
+backend/trustvault_dev.db-wal
+backend/dev_storage/
+backend/test_flow.py
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# ── Docker ────────────────────────────────────────────────────────────────────
+# Don't ignore docker-compose.yml — it's config, not secrets
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
