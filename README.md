@@ -4,6 +4,8 @@ A secure document-sharing platform built for a security engineering competition.
 
 **Security over feature count. A single unauthorized document disclosure is a major failure.**
 
+**GitHub:** https://github.com/kyathi-hub/trust_vault
+
 ---
 
 ## Features
@@ -31,66 +33,72 @@ Internet → Caddy (:443) → Backend API (FastAPI) → PostgreSQL
 
 All internal services are on a private Docker network — only Caddy is exposed.
 
-## Quick Start
+---
+
+## Quick Start (Dev Mode — No Docker Required)
 
 ### Prerequisites
-- Docker Desktop (or Docker Engine + Compose plugin)
-- Python 3.12+ (for secret generation script)
+- Python 3.12+
+- Node.js 20+
 
-### 1. Clone and generate secrets
-
+### 1. Clone and set up backend
 ```bash
-git clone <repo-url> trustvault
-cd trustvault
-cp .env.example .env
-bash scripts/generate-secrets.sh >> .env
-# Edit .env to set PUBLIC_HOSTNAME if deploying publicly
+git clone https://github.com/kyathi-hub/trust_vault.git
+cd trust_vault/backend
+pip install -e ".[dev]" aiosqlite
+python -m alembic upgrade head
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-### 2. Start
+### 2. Set up frontend (new terminal)
+```bash
+cd trust_vault/frontend
+npm install
+npm run dev
+```
+
+### 3. Open the app
+Go to **http://localhost:5173**
+
+Select a demo account to log in — no Keycloak required in dev mode.
+
+> **Note for judges:** The app runs with SQLite and local file storage in dev mode.
+> The "Approve (dev)" button on quarantined documents simulates ClamAV malware scanning
+> (which runs automatically in Docker production deployment). Click it to enable download.
+
+---
+
+## Quick Start (Production — Docker Compose)
 
 ```bash
+git clone https://github.com/kyathi-hub/trust_vault.git
+cd trust_vault
+cp .env.example .env
+python scripts/generate-secrets.sh  # fill in .env
 bash scripts/dev-up.sh
 ```
 
-### 3. Verify health
-
-```bash
-bash scripts/healthcheck.sh
-```
-
-### 4. Access
-
-- App: `https://localhost`
-- API docs (dev only): `https://localhost/api/docs`
+---
 
 ## Demo Accounts
 
-> These are disposable demo credentials. Change them for any real deployment.
-> Passwords marked as temporary — Keycloak will prompt for change on first login.
-
-| Role | Email | Password |
+| Role | Email | Password (dev) |
 |---|---|---|
-| Administrator | admin@trustvault.local | Admin1234! |
-| Document Owner | alice@trustvault.local | Alice1234! |
-| Viewer (has access) | bob@trustvault.local | Bob12345! |
-| Viewer (no access) | carol@trustvault.local | Carol123! |
+| Administrator | admin@trustvault.local | select "Admin" on login screen |
+| Document Owner | alice@trustvault.local | select "Alice" on login screen |
+| Viewer (has access) | bob@trustvault.local | select "Bob" on login screen |
+| Viewer (no access) | carol@trustvault.local | select "Carol" on login screen |
 
-**Demo scenario:**
-1. Log in as Alice → upload a document
-2. Grant Bob read access
-3. Log in as Bob → download the document ✓
-4. Log back in as Alice → revoke Bob's access
-5. Log back in as Bob → try to download → denied ✗
-6. Log in as Admin → view audit trail showing the grant, download, revocation, and denial
+## Demo Scenario
 
-## Running Tests
+1. Log in as **Alice** → upload a document
+2. Go to document → Grant Bob read access
+3. Log in as **Bob** → see document in Shared With Me → download ✓
+4. Log back in as **Alice** → Revoke Bob's access
+5. Log in as **Bob** → try to download → 404 (denied) ✓
+6. Log in as **Admin** → Audit Log → see full trail → Verify Chain → ✓
 
-```bash
-cd backend
-pip install -e ".[dev]" psycopg2-binary
-pytest -v
-```
+---
 
 ## Security Design
 
@@ -102,9 +110,8 @@ See:
 
 ## ⚠ Security Warning
 
-The demo credentials in this repository are for judged demonstration only.
-Do not use them in production. Run `bash scripts/generate-secrets.sh` to generate
+The demo credentials are for judged demonstration only.
+Do not use them in production. Run `python scripts/generate-secrets.sh` to generate
 fresh secrets for any real deployment.
 
-The `ENCRYPTION_KEK` must be backed up securely — losing it means losing
-access to all encrypted documents.
+The `ENCRYPTION_KEK` must be backed up securely — losing it means losing access to all encrypted documents.

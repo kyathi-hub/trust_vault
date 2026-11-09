@@ -30,7 +30,7 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const API_BASE = "/api/v1";
+const API_BASE = (import.meta.env["VITE_API_URL"] as string | undefined) ?? "/api/v1";
 const DEV_USERS = ["alice", "bob", "carol", "admin"] as const;
 type DevUser = typeof DEV_USERS[number];
 

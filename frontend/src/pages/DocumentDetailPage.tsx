@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatBytes, formatDate } from "@/lib/utils";
 import { getMemoryToken } from "@/lib/api";
-import type { Grant } from "@/types/api";
+import { toast } from "@/hooks/useToast";
+import type { Grant, UserProfile } from "@/types/api";
 
 export function DocumentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -258,7 +259,7 @@ function ScanBadge({ status }: { status: string }) {
   return <Badge variant="warning">Quarantined</Badge>;
 }
 
-function GrantRow({ grant, users, onRevoke }: { grant: Grant; users?: any[]; onRevoke: () => void }) {
+function GrantRow({ grant, users, onRevoke }: { grant: Grant; users?: UserProfile[]; onRevoke: () => void }) {
   const grantee = users?.find((u) => u.id === grant.grantee_id);
   const isRevoked = !!grant.revoked_at;
   const isExpired = grant.expires_at && new Date(grant.expires_at) < new Date();

@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     # Application
     app_env: Literal["development", "production", "test"] = "development"
     app_secret_key: str = "dev-secret-key-not-for-production"
-    cors_allowed_origins: list[str] = ["http://localhost:5173"]
+    cors_allowed_origins: list[str] = [
+        "http://localhost:5173",
+        "https://8466f296279906.lhr.life",
+    ]
 
     # Database
     database_url: str = "sqlite+aiosqlite:///./trustvault_dev.db"

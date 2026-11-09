@@ -15,6 +15,8 @@ Security headers, CORS, and rate limiting are all configured here.
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import os
 
 from app.config import get_settings
 from app.security.middleware import CorrelationIDMiddleware, SecurityHeadersMiddleware
@@ -110,7 +112,21 @@ async def on_startup() -> None:
         logger.info("storage_ready")
     except Exception as exc:
         logger.error("minio_startup_failed", error=str(exc))
-        # Don't crash — readiness endpoint will report unavailable
+
+    # Serve frontend static files if dist/ exists (single-port deployment)
+    frontend_dist = os.path.join(os.path.dirname(__file__), "../../frontend/dist")
+    if os.path.isdir(frontend_dist):
+        from fastapi.responses import FileResponse
+        from fastapi import Request as FRequest
+
+        @app.get("/{full_path:path}", include_in_schema=False)
+        async def serve_spa(full_path: str, request: FRequest) -> FileResponse:
+            file_path = os.path.join(frontend_dist, full_path)
+            if os.path.isfile(file_path):
+                return FileResponse(file_path)
+            return FileResponse(os.path.join(frontend_dist, "index.html"))
+
+        logger.info("frontend_static_serving", path=frontend_dist)
 
 
 @app.on_event("shutdown")
